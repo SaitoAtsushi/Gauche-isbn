@@ -1,0 +1,98 @@
+(define-library (book isbn)
+  (export string->isbn isbn->string isbn-type isbn10->isbn13)  
+  (import (scheme base)
+          (scheme char)
+          (scheme write))
+  (begin
+
+    (define-record-type <isbn>
+      (isbn number) isbn?
+      (number isbn-number))
+    
+    (define (string-prefix? s1 s2)
+      (call-with-port (open-input-string s1)
+        (lambda(port1)
+          (call-with-port (open-input-string s2)
+            (lambda(port2)
+              (do ((ch1 (read-char port1) (read-char port1))
+                   (ch2 (read-char port2) (read-char port2)))
+                  ((or (eof-object? ch1)
+                       (eof-object? ch2)
+                       (not (eqv? ch1 ch2)))
+                   (eof-object? ch1))))))))
+
+    (define (string->isbn isbn-str)
+      (if (or (string-prefix? "978" isbn-str)
+              (string-prefix? "979" isbn-str))
+          (isbn-read isbn-str 13)
+          (isbn-read isbn-str 10)))
+
+    (define (isbn->string x)
+      (if (isbn? x)
+          (let ((s (open-output-string)))
+            (vector-for-each
+             (lambda(e)
+               (display (if (< e 10)
+                            (number->string e)
+                            (if (= 10 (isbn-type x)) "X" "0"))
+                        s))
+             (isbn-number x))
+            (get-output-string s))
+          #f))
+
+    (define-syntax inc!
+      (syntax-rules ()
+        ((_ place delta)
+         (set! place (+ place delta)))))
+
+    (define (isbn-read isbn-str col)
+      (let ((v (make-vector col))
+            (i 0))
+        (define (pushv n)  (vector-set! v i n) (inc! i 1))
+        (define (fault) (set! v #f) (set! i col)) 
+        (call-with-port (open-input-string isbn-str)
+          (lambda(port)
+            (do ((ch (read-char port) (read-char port)))
+                ((>= i col)
+                 (and (eof-object? ch) (valid-isbn? v) (isbn v)))
+              (cond ((eof-object? ch)   (fault))
+                    ((char-numeric? ch) (pushv (digit-value ch)))
+                    ((char-ci=? ch #\x)    (pushv 10))
+                    ((char=? ch #\-))
+                    (else               (fault))))))))
+
+    (define (valid-isbn10? x)
+      (let ((sums 0))
+        (vector-for-each
+         (lambda(i e) (inc! sums (* i e)))
+         '#(10 9 8 7 6 5 4 3 2 1)
+         x)
+        (= 0 (modulo sums 11))))
+
+    (define (isbn13-checksum x)
+      (let ((sums 0))
+        (do ((i 0 (+ i 1))
+             (w 1 (if (= w 1) 3 1)))
+            ((= i 12) (- 10 (modulo sums 10)))
+          (inc! sums (* (vector-ref x i) w)))))
+
+    (define (valid-isbn13? x)
+      (= (isbn13-checksum x) (vector-ref x 12)))
+
+    (define (isbn-type x)
+      (if (isbn? x) (vector-length (isbn-number x)) #f))
+
+    (define (valid-isbn? x)
+      (case (vector-length x)
+        ((10) (valid-isbn10? x))
+        ((13) (valid-isbn13? x))))
+
+    (define (isbn10->isbn13 x)
+      (if (= 10 (isbn-type x))
+          (let ((v (make-vector 13)))
+            (vector-copy! v 3 (isbn-number x) 0 9)
+            (vector-copy! v 0 #(9 7 8) 0)
+            (vector-set! v 12 (isbn13-checksum v))
+            (isbn v))
+          #f))
+    ))

@@ -3,9 +3,33 @@
 ;;;
 (import (scheme base)
         (scheme write)
-        (gauche test)
         (book ndl)
         (book isbn))
+
+(cond-expand
+ (gauche (import (gauche test)))
+ ((library (srfi 64))
+  (import (prefix (srfi 64) srfi:))
+  (define-syntax test-start
+    (syntax-rules ()
+      ((_ name) (srfi:test-begin name))))
+  (define-syntax test*
+    (syntax-rules ()
+      ((_ name expect expr)
+       (srfi:test-equal name expect expr))))
+  (define-syntax test-module
+    (syntax-rules ()
+      ((_ ignore ...)
+       ;; unfortunately Sagittarius 0.5.7 has a bug
+       ;; that stop reading if (values) is in toplevel.
+       ;; so just #t here
+       ;; (values)
+       #t)))
+  (define-syntax test-end
+    (syntax-rules ()
+      ((_ ignore ...) (srfi:test-end)))))
+ (else (error "(srfi 64) is required for testing")))
+
 
 (test-start "book.isbn")
 (test-module 'book.isbn)

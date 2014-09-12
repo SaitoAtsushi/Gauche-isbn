@@ -3,11 +3,18 @@
    isbn->book-information book-information?
    book-title book-authors book-publisher book-date)
   (import (scheme base)
-          (sxml sxpath)
-          (sxml ssax)
           (book isbn)
-          (srfi 8)
-          (rfc http))
+          (srfi 8))
+  (cond-expand
+   (gauche
+    (import (sxml sxpath)
+	    (sxml ssax)
+	    (rfc http)))
+   (sagittarius
+    (import (text sxml sxpath)
+	    (text sxml ssax)
+	    (rfc http)))
+   (else (begin (error "(book ndl) requires SXML and SXPath support"))))
   (begin
 
     (define-record-type <book-information>

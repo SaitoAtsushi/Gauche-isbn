@@ -10,10 +10,11 @@ At first, take clone from github.
 ```console
 git clone git@github.com:SaitoAtsushi/Gauche-isbn.git
 ```
-And then, Please run the following command.
+And then, please run the following command.
 
 ```console
-configure & make install.
+./configure
+make install
 ```
 
 ## Requirements

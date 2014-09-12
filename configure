@@ -31,6 +31,8 @@
 (cf-path-prog 'GOSH  "gosh")
 (cf-path-prog 'GAUCHE_INSTALL  "gauche-install")
 
+(cf-subst 'default_prefix (gauche-config "--prefix"))
+
 ;; Some common parameters
 (cf-subst 'GAUCHE_PKGLIBDIR  (gauche-config "--pkglibdir"))
 
